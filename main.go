@@ -91,8 +91,7 @@ func (r *ArgocdAutopilot) RunCommand() error {
 func postCommands(c *gin.Context) {
 	var newCommand ArgocdAutopilot
 
-	// Call BindJSON to bind the received JSON to
-	// newAlbum.
+	// Call BindJSON to bind the received JSON to newCommand
 	if err := c.BindJSON(&newCommand); err != nil {
 		log.Printf("error %s", err)
 		return
