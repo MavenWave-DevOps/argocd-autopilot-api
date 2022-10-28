@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 )
@@ -100,13 +99,17 @@ func ExecuteCommands(c *gin.Context) {
 	//Run commands
 	if err := newCommand.RunCommand(); err != nil {
 		log.Printf("error %s", err)
+		myResp := Response{
+			Status:  500,
+			Message: "Internal Server Error",
+		}
+		SendResponse(c, myResp)
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, newCommand)
 
 	myResp := Response{
 		Status:  201,
-		Message: []string{"All good"},
+		Message: "All good",
 	}
 	SendResponse(c, myResp)
 	return
