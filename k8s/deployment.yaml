@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: argocd-api
+  name: argocd-api
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd-api
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: argocd-api
+    spec:
+      containers:
+      - image: gcr.io/tony-sandbox-308422/px-api-darwin:0.0.1
+        name: px-api-darwin
+        ports:
+        - containerPort: 8080
