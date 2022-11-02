@@ -43,6 +43,7 @@ func CommandHelper(rootcmd string, args ...string) (string, error) {
 			log.Println(result)
 			c <- result
 		}
+		close(c)
 	}(stdout)
 
 	go func(o io.ReadCloser) {
