@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 )
 
 type ArgocdAutopilot struct {
@@ -36,32 +37,16 @@ func (r *ArgoCommand) StreamOutput(c *gin.Context, cChan chan Log) (error, strin
 		if err != nil {
 			log.Println("Error marshalling json: ", err)
 		}
-		outputBytes := bytes.NewBuffer(jsonOut)
-		c.Writer.Write(append(outputBytes.Bytes(), []byte("\n")...))
+		outputBytes := bytes.NewBuffer([]byte("\n"))
+		c.Writer.Write(append(outputBytes.Bytes(), jsonOut...))
 		return true
 	})
 	return nil, ""
 }
 
 func (r *TokenCommand) StreamOutput(c *gin.Context, cChan chan Log) (error, string) {
-	var finalOutput string
-	c.Stream(func(w io.Writer) bool {
-		output, ok := <-cChan
-		if output.Message != "" {
-			finalOutput = output.Message
-		}
-		if !ok {
-			return false
-		}
-		jsonOut, err := json.Marshal(output)
-		if err != nil {
-			log.Println("Error marshalling json: ", err)
-		}
-		outputBytes := bytes.NewBuffer(jsonOut)
-		c.Writer.Write(append(outputBytes.Bytes(), []byte("\n")...))
-		return true
-	})
-	return nil, finalOutput
+	finalOutput := <-cChan
+	return nil, finalOutput.Message
 }
 
 func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, error) {
@@ -154,28 +139,36 @@ func (r *ArgocdAutopilot) RunCommand(c *gin.Context) error {
 
 func ExecuteCommands(c *gin.Context) {
 	var newCommand ArgocdAutopilot
+	var myResponse = Response{}
+	var wg = sync.WaitGroup{}
+
+	wg.Add(1)
 
 	// Call BindJSON to bind the received JSON to newCommand
 	if err := c.BindJSON(&newCommand); err != nil {
 		log.Printf("error %s", err)
+		myResponse = Response{
+			Status:  500,
+			Message: "Internal Server Error",
+		}
+		SendResponse(c, myResponse)
 		return
 	}
 
 	//Run commands
-	if err := newCommand.RunCommand(c); err != nil {
-		log.Printf("error %s", err)
-		myResp := Response{
-			Status:  500,
-			Message: "Internal Server Error",
+	go func() {
+		if err := newCommand.RunCommand(c); err != nil {
+			log.Printf("error %s", err)
+			wg.Done()
 		}
-		SendResponse(c, myResp)
-		return
-	}
+		wg.Done()
+	}()
 
-	myResp := Response{
+	myResponse = Response{
 		Status:  201,
 		Message: "API Called Successfully",
 	}
-	SendResponse(c, myResp)
+	SendResponse(c, myResponse)
+	wg.Wait()
 	return
 }
