@@ -16,6 +16,7 @@ type Stringer interface {
 }
 
 func (r Server) Start() error {
+	gin.ForceConsoleColor()
 	router := gin.Default()
 	router.Use(cors.Default())
 	router.POST("/run", ExecuteCommands)
