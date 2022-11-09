@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -55,11 +56,11 @@ func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, erro
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	if err := cmd.Start(); err != nil {
 		log.Println("Failed to start", err)
@@ -76,7 +77,7 @@ func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, erro
 		}
 		if rootcmd != "cat" {
 			cChan <- Log{
-				Message: "Command successful",
+				Message: fmt.Sprintf("%s %s: Command successful", rootcmd, strings.Trim(fmt.Sprint(args), "[]")),
 			}
 		}
 		close(cChan)
@@ -94,13 +95,13 @@ func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, erro
 		var cmdType TokenCommand = true
 		err, data = StreamByCommand(&cmdType, c, cChan)
 		if err != nil {
-			log.Println(err)
+			return "", err
 		}
 	} else {
 		var cmdType ArgoCommand = true
 		err, data = StreamByCommand(&cmdType, c, cChan)
 		if err != nil {
-			log.Println(err)
+			return "", err
 		}
 	}
 
@@ -159,7 +160,13 @@ func ExecuteCommands(c *gin.Context) {
 	go func() {
 		if err := newCommand.RunCommand(c); err != nil {
 			log.Printf("error %s", err)
+			myResponse = Response{
+				Status:  500,
+				Message: "Internal Server Error",
+			}
+			SendResponse(c, myResponse)
 			wg.Done()
+			return
 		}
 		wg.Done()
 	}()
