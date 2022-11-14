@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"ConfigMap","metadata":{"annotations":{},"labels":{"app.kubernetes.io/instance":"argo-cd","app.kubernetes.io/name":"argocd-rbac-cm","app.kubernetes.io/part-of":"argocd"},"name":"argocd-rbac-cm","namespace":"argocd"}}
+  creationTimestamp: "2022-11-09T21:50:39Z"
+  labels:
+    app.kubernetes.io/instance: argo-cd
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+  name: argocd-rbac-cm
+  namespace: argocd
+  resourceVersion: "10740"
+  uid: 6ff8acaa-7196-4838-9fd1-d15d1ef25b42
+data:
+  policy.default: role:admin

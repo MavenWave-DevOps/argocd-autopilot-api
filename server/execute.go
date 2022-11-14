@@ -14,11 +14,21 @@ import (
 	"sync"
 )
 
+const (
+	argocdHost = "https://localhost:8083"
+)
+
 type ArgocdAutopilot struct {
 	GitRepo      string   `json:"git-repo"`
 	GitTokenPath string   `json:"git-token-path"`
 	RootCommand  string   `json:"root-command"`
 	Args         []string `json:"args"`
+}
+
+var LinkMap map[string]string = map[string]string{
+	"app":       "/applications",
+	"project":   "/settings/projects",
+	"bootstrap": "/applications",
 }
 
 type Log struct {
@@ -53,7 +63,6 @@ func (r *TokenCommand) StreamOutput(c *gin.Context, cChan chan Log) (error, stri
 func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, error) {
 	cmd := exec.Command(rootcmd, args...)
 	cChan := make(chan Log)
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err
@@ -71,6 +80,7 @@ func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, erro
 		scanner := bufio.NewScanner(o)
 		for scanner.Scan() {
 			result := scanner.Text()
+			fmt.Println("Scanned: ", result)
 			cChan <- Log{
 				Message: result,
 			}
@@ -104,7 +114,6 @@ func CommandHelper(c *gin.Context, rootcmd string, args ...string) (string, erro
 			return "", err
 		}
 	}
-
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("%s", cmd.String())
@@ -124,6 +133,7 @@ func (r *ArgocdAutopilot) RunCommand(c *gin.Context) error {
 	if err != nil {
 		return err
 	}
+	log.Println("Token is: ", resp)
 	if err := os.Setenv("GIT_TOKEN", fmt.Sprintf("%s", resp)); err != nil {
 		log.Println(err)
 		return err
@@ -171,9 +181,17 @@ func ExecuteCommands(c *gin.Context) {
 		wg.Done()
 	}()
 
+	var link string
+	if val, ok := LinkMap[newCommand.Args[0]]; !ok {
+		log.Printf("Couldn't find value: %s", newCommand.Args[0])
+		link = "does not exist"
+	} else {
+		link = fmt.Sprintf("Link is: %s%s", argocdHost, val)
+	}
 	myResponse = Response{
 		Status:  201,
 		Message: "API Called Successfully",
+		Link:    link,
 	}
 	SendResponse(c, myResponse)
 	wg.Wait()
